@@ -165,6 +165,72 @@ export interface TranslationResources {
           unknownTime: string
         }
       }
+      network: {
+        active: string
+        allowLan: string
+        broadcast: string
+        cardSettings: {
+          connections: string
+          ipquality: string
+          lanip: string
+          purity: string
+        }
+        checkedAt: string
+        connections: string
+        copy: string
+        destination: string
+        detection: string
+        disabled: string
+        egress: string
+        enabled: string
+        failed: string
+        fallback: string
+        flagged: string
+        flags: {
+          abuser: string
+          datacenter: string
+          proxy: string
+          tor: string
+          vpn: string
+        }
+        hideIp: string
+        lan: string
+        lanFailed: string
+        live: string
+        loading: string
+        localIpv4: string
+        lowerBetter: string
+        native: string
+        no: string
+        noConnections: string
+        noLan: string
+        outbound: string
+        process: string
+        purity: string
+        quality: string
+        referenceOnly: string
+        riskScore: string
+        score: string
+        settings: {
+          description: string
+          keyHint: string
+          privacy: string
+          title: string
+        }
+        showIp: string
+        stopped: string
+        types: {
+          business: string
+          hosting: string
+          mobile: string
+          residential: string
+          unknown: string
+        }
+        unflagged: string
+        unknown: string
+        viewAll: string
+        yes: string
+      }
       page: {
         cards: {
           networkSettings: string
@@ -1589,6 +1655,7 @@ export interface TranslationResources {
           noDisney: string
           originalsOnly: string
           pending: string
+          risky: string
           unsupportedRegion: string
           yes: string
         }

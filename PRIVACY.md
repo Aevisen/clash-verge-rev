@@ -126,6 +126,18 @@ Each service is operated by an independent third party under its own privacy
 policy; the project has no agreement with any of them. Keep the Home page
 closed (or the application minimised) if you do not want these requests.
 
+The IP quality and network purity cards additionally query
+`https://my.ippure.com/v1/info`, or `https://api.ipapi.is/` when an API key is
+configured under Settings → IP quality detection. A failed keyed lookup falls
+back to IPPure. The cards share a result cached in memory for 30 minutes and
+support manual refresh. Missing detection fields are shown as unknown.
+Both services see the detection request's egress IP, which can differ from the
+egress used for other websites under routing rules. The optional key is stored
+unencrypted in this device's WebView local storage, outside profile backups,
+and sent only to ipapi.is in an HTTPS POST body. Clear the key in Settings to
+remove it, and disable both cards in Home Settings to stop their queries.
+The LAN IP and live connection cards use local interface and core data only.
+
 ### 4.6 Latency tests — *user-initiated*
 
 Testing a proxy or group sends an HTTP request through that proxy to

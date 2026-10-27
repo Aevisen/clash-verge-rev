@@ -152,5 +152,71 @@
         "direct": "所有流量不经过代理节点，但经过 Clash 内核转发连接目标服务器，适用于需要通过内核进行分流的特定场景"
       }
     }
+  },
+  "network": {
+    "quality": "IP 属性与质量",
+    "purity": "网络纯净度",
+    "lan": "内网 IP",
+    "connections": "实时连接",
+    "loading": "正在检测网络",
+    "failed": "暂时无法获取检测结果，请稍后刷新。",
+    "fallback": "带 Key 查询失败，已使用公开接口。",
+    "detection": "风险标记检测",
+    "riskScore": "IPPure 风险系数",
+    "lowerBetter": "数值越低越好 · 来源方评分，非网速测试",
+    "flagged": "存在检测标记",
+    "unflagged": "未见检测标记",
+    "unknown": "未知",
+    "yes": "是",
+    "no": "否",
+    "egress": "检测请求出口 IP",
+    "showIp": "显示 IP 地址",
+    "hideIp": "隐藏 IP 地址",
+    "score": "风险 {{score}} / 100",
+    "broadcast": "广播 IP",
+    "native": "原生 IP",
+    "checkedAt": "{{time}} 检测",
+    "referenceOnly": "第三方检测结果仅供参考，不代表 AI 服务的实际可用性。",
+    "flags": {
+      "proxy": "代理",
+      "vpn": "VPN",
+      "tor": "Tor",
+      "datacenter": "机房",
+      "abuser": "滥用"
+    },
+    "types": {
+      "residential": "住宅网络",
+      "hosting": "机房网络",
+      "mobile": "移动网络",
+      "business": "企业网络",
+      "unknown": "属性未知"
+    },
+    "localIpv4": "本机局域网 IPv4 地址",
+    "lanFailed": "无法读取网卡信息。",
+    "noLan": "未发现内网 IPv4 地址",
+    "allowLan": "局域网代理",
+    "enabled": "已开启",
+    "disabled": "已关闭",
+    "viewAll": "查看全部",
+    "active": "个活跃连接",
+    "live": "实时",
+    "stopped": "内核未运行",
+    "process": "来源",
+    "destination": "目标",
+    "outbound": "出口",
+    "noConnections": "暂无活跃连接",
+    "cardSettings": {
+      "ipquality": "IP 属性与质量卡片",
+      "lanip": "内网 IP 卡片",
+      "connections": "实时连接卡片",
+      "purity": "网络纯净度卡片"
+    },
+    "settings": {
+      "title": "IP 质量检测",
+      "description": "有 Key 时优先使用 ipapi.is；未配置或查询失败时，使用 IPPure 公开接口。",
+      "keyHint": "可选，留空或清除后仅使用公开接口。",
+      "privacy": "Key 以未加密形式保存在本机，不随订阅备份，仅通过 HTTPS 请求正文发送给 ipapi.is。检测服务会收到本次请求的出口 IP。"
+    },
+    "copy": "复制"
   }
 }

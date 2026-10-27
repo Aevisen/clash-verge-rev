@@ -17,6 +17,7 @@ import {
   FormControlLabel,
   FormGroup,
   Grid,
+  type GridProps,
   IconButton,
   Skeleton,
   Tooltip,
@@ -31,6 +32,9 @@ import { CurrentProxyCard } from '@/components/home/current-proxy-card'
 import { EnhancedCard } from '@/components/home/enhanced-card'
 import { EnhancedTrafficStats } from '@/components/home/enhanced-traffic-stats'
 import { HomeProfileCard } from '@/components/home/home-profile-card'
+import { IpAssessmentCard } from '@/components/home/ip-assessment-card'
+import { LanIpCard } from '@/components/home/lan-ip-card'
+import { LiveConnectionsCard } from '@/components/home/live-connections-card'
 import { ProxyTunCard } from '@/components/home/proxy-tun-card'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useVerge } from '@/hooks/use-verge'
@@ -83,6 +87,10 @@ interface HomeCardsSettings {
   systeminfo: boolean
   test: boolean
   ip: boolean
+  ipquality: boolean
+  lanip: boolean
+  connections: boolean
+  purity: boolean
   [key: string]: boolean
 }
 
@@ -97,6 +105,10 @@ const DEFAULT_HOME_CARDS: HomeCardsSettings = {
   systeminfo: true,
   test: true,
   ip: true,
+  ipquality: true,
+  lanip: true,
+  connections: true,
+  purity: true,
 }
 
 const serializeCardFlags = (cards: HomeCardsSettings) =>
@@ -118,6 +130,7 @@ const HomeSettingsDialog = ({
 }: HomeSettingsDialogProps) => {
   const { t } = useTranslation()
   const [cards, setCards] = useState<HomeCardsSettings>(homeCards)
+  const [saving, setSaving] = useState(false)
   const { patchVerge } = useVerge()
 
   const handleToggle = (key: string) => {
@@ -127,16 +140,37 @@ const HomeSettingsDialog = ({
     }))
   }
 
-  const handleSave = async () => {
-    await patchVerge({ home_cards: cards })
-    onClose()
-  }
+  const handleSave = useLockFn(async () => {
+    setSaving(true)
+    try {
+      await patchVerge({ home_cards: cards })
+      onClose()
+    } catch (error) {
+      showNotice.error(error)
+    } finally {
+      setSaving(false)
+    }
+  })
 
   return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open onClose={saving ? undefined : onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{t('home.page.settings.title')}</DialogTitle>
       <DialogContent>
         <FormGroup>
+          {(['ipquality', 'lanip', 'connections', 'purity'] as const).map(
+            (key) => (
+              <FormControlLabel
+                key={key}
+                control={
+                  <Checkbox
+                    checked={cards[key]}
+                    onChange={() => handleToggle(key)}
+                  />
+                }
+                label={t(`home.network.cardSettings.${key}`)}
+              />
+            ),
+          )}
           <FormControlLabel
             control={
               <Checkbox
@@ -221,8 +255,10 @@ const HomeSettingsDialog = ({
         </FormGroup>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('shared.actions.cancel')}</Button>
-        <Button onClick={handleSave} color="primary">
+        <Button onClick={onClose} disabled={saving}>
+          {t('shared.actions.cancel')}
+        </Button>
+        <Button onClick={handleSave} color="primary" loading={saving}>
           {t('shared.actions.save')}
         </Button>
       </DialogActions>
@@ -239,8 +275,13 @@ const HomePage = () => {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   // 卡片显示状态
-  const homeCards =
-    (verge?.home_cards as HomeCardsSettings | undefined) ?? DEFAULT_HOME_CARDS
+  const homeCards = useMemo(
+    () => ({
+      ...DEFAULT_HOME_CARDS,
+      ...(verge?.home_cards as HomeCardsSettings | undefined),
+    }),
+    [verge?.home_cards],
+  )
 
   // 文档链接函数
   const toGithubDoc = useLockFn(() =>
@@ -255,7 +296,11 @@ const HomePage = () => {
   }, [])
 
   const renderCard = useCallback(
-    (cardKey: string, component: React.ReactNode, size: number = 6) => {
+    (
+      cardKey: string,
+      component: React.ReactNode,
+      size: GridProps['size'] = 6,
+    ) => {
       if (!homeCards[cardKey]) return null
 
       return (
@@ -269,6 +314,10 @@ const HomePage = () => {
 
   const criticalCards = useMemo(
     () => [
+      renderCard('ipquality', <IpAssessmentCard />),
+      renderCard('lanip', <LanIpCard />),
+      renderCard('purity', <IpAssessmentCard purity />, { xs: 6, md: 4 }),
+      renderCard('connections', <LiveConnectionsCard />, { xs: 6, md: 8 }),
       renderCard(
         'profile',
         <HomeProfileCard current={current} onProfileUpdated={mutateProfiles} />,

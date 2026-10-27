@@ -1,0 +1,61 @@
+name: Build macOS Personal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+  HUSKY: 0
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.22.1'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare core and resources
+        run: pnpm run prebuild aarch64-apple-darwin
+
+      - name: Build DMG with ad-hoc signing
+        run: >-
+          pnpm run build
+          --target aarch64-apple-darwin
+          --bundles dmg
+          --ci
+          --config '{"bundle":{"createUpdaterArtifacts":false,"macOS":{"signingIdentity":"-"}}}'
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: Clash-Verge-macOS-Apple-Silicon
+          archive: false
+          path: target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 7

@@ -152,5 +152,71 @@
         "direct": "Umgeht den Proxy und verbindet sich direkt mit dem Internet."
       }
     }
+  },
+  "network": {
+    "quality": "IP attributes & quality",
+    "purity": "Network purity",
+    "lan": "LAN IP",
+    "connections": "Live connections",
+    "loading": "Checking network",
+    "failed": "Detection unavailable. Try refreshing later.",
+    "fallback": "Keyed lookup failed; using the public provider.",
+    "detection": "Detection results",
+    "riskScore": "IPPure risk score",
+    "lowerBetter": "Lower is better · Provider score, not a connection speed test",
+    "flagged": "Detection flags present",
+    "unflagged": "No detection flags",
+    "unknown": "Unknown",
+    "yes": "Detected",
+    "no": "Not detected",
+    "egress": "Detection request egress IP",
+    "showIp": "Show IP address",
+    "hideIp": "Hide IP address",
+    "score": "Risk {{score}} / 100",
+    "broadcast": "Non-native IP",
+    "native": "Native IP",
+    "checkedAt": "Checked at {{time}}",
+    "referenceOnly": "Third-party results are for reference; they do not guarantee access to AI services.",
+    "flags": {
+      "proxy": "Proxy",
+      "vpn": "VPN",
+      "tor": "Tor",
+      "datacenter": "Hosting",
+      "abuser": "Abuse"
+    },
+    "types": {
+      "residential": "Residential",
+      "hosting": "Hosting",
+      "mobile": "Mobile",
+      "business": "Business",
+      "unknown": "Unknown type"
+    },
+    "localIpv4": "Private IPv4 addresses",
+    "lanFailed": "Unable to read network interfaces.",
+    "noLan": "No private IPv4 address found",
+    "allowLan": "LAN proxy access",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "viewAll": "View all",
+    "active": "active connections",
+    "live": "Live",
+    "stopped": "Core stopped",
+    "process": "Process",
+    "destination": "Destination",
+    "outbound": "Outbound",
+    "noConnections": "No active connections",
+    "cardSettings": {
+      "ipquality": "IP attributes & quality card",
+      "lanip": "LAN IP card",
+      "connections": "Live connections card",
+      "purity": "Network purity card"
+    },
+    "settings": {
+      "title": "IP quality detection",
+      "description": "With a key: use ipapi.is first. Without a key, or if that request fails: use IPPure public detection.",
+      "keyHint": "Optional. Clear to use public detection only.",
+      "privacy": "The key is stored unencrypted on this device, outside profile backups. It is sent only to ipapi.is in an HTTPS request body. Detection providers see the request egress IP."
+    },
+    "copy": "Copy"
   }
 }
