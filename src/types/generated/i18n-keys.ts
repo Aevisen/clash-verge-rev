@@ -1007,6 +1007,9 @@ export const translationKeys = [
   'tests.unlock.page.messages.detectionFailedWithName',
   'tests.unlock.page.messages.detectionTimeout',
   'tests.unlock.page.title',
+  'tests.presets.title',
+  'tests.presets.description',
+  'tests.presets.empty',
 ] as const
 
 export type TranslationKey = (typeof translationKeys)[number]

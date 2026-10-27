@@ -1645,6 +1645,11 @@ export interface TranslationResources {
         }
         title: string
       }
+      presets: {
+        description: string
+        empty: string
+        title: string
+      }
       statuses: {
         test: {
           completed: string
