@@ -3,7 +3,8 @@
     "tooltips": {
       "lightweightMode": "輕量模式",
       "manual": "使用手冊",
-      "settings": "首頁設定"
+      "settings": "首頁設定",
+      "dragCard": "拖曳調整位置"
     },
     "cards": {
       "trafficStats": "流量統計",
@@ -80,7 +81,10 @@
         "location": "位置",
         "timezone": "時區",
         "autoRefresh": "自動重整",
-        "unknown": "未知"
+        "unknown": "未知",
+        "basic": "基本資訊",
+        "refreshInterval": "重新整理間隔",
+        "everyMinutes": "每 {{count}} 分鐘"
       },
       "errors": {
         "load": "取得 IP 資訊失敗",
@@ -156,14 +160,11 @@
   "network": {
     "quality": "IP attributes & quality",
     "purity": "Network purity",
-    "lan": "LAN IP",
-    "connections": "Live connections",
-    "activity": "網路活動",
     "loading": "Checking network",
     "failed": "Detection unavailable. Try refreshing later.",
     "fallback": "Keyed lookup failed; using the public provider.",
     "detection": "Detection results",
-    "riskScore": "IPPure risk score",
+    "riskScore": "{{provider}} risk score",
     "lowerBetter": "Lower is better · Provider score, not a connection speed test",
     "flagged": "Detection flags present",
     "unflagged": "No detection flags",
@@ -192,47 +193,84 @@
       "business": "Business",
       "unknown": "Unknown type"
     },
-    "localIpv4": "Private IPv4 addresses",
-    "lanFailed": "Unable to read network interfaces.",
-    "noLan": "No private IPv4 address found",
-    "allowLan": "LAN proxy access",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "viewAll": "View all",
-    "activeCount": "{{count}} active connections",
-    "live": "Live",
-    "stopped": "Core stopped",
-    "process": "Process",
-    "destination": "Destination",
-    "outbound": "Outbound",
-    "noConnections": "No active connections",
-    "cardSettings": {
-      "ipquality": "IP attributes & quality card",
-      "lanip": "LAN IP card",
-      "connections": "網路活動卡片",
-      "purity": "Network purity card"
-    },
     "settings": {
       "title": "IP quality detection",
-      "description": "With a key: use ipapi.is first. Without a key, or if that request fails: use IPPure public detection.",
-      "keyHint": "Optional. Clear to use public detection only.",
-      "privacy": "The key is stored unencrypted on this device, outside profile backups. It is sent only to ipapi.is in an HTTPS request body. Detection providers see the request egress IP."
+      "description": "依列表順序使用已新增的檢測服務，前一個失敗時自動嘗試下一個；都沒有或都失敗時，使用 IPPure 公開介面。",
+      "privacy": "Key 以未加密形式儲存在本機，不隨訂閱備份，只傳送給對應的檢測服務（ipapi.is 放在 HTTPS 請求本文，cleanip.io 放在請求標頭）。檢測服務會收到本次請求的出口 IP。",
+      "provider": "服務類型",
+      "url": "伺服器位址",
+      "add": "新增服務",
+      "remove": "刪除",
+      "empty": "未新增檢測服務，將只使用 IPPure 公開介面。",
+      "httpsRequired": "檢測服務必須使用有效的 HTTPS 位址；留空使用預設位址。"
     },
-    "copy": "Copy",
-    "dns": {
-      "count": "{{count}} 筆 DNS 查詢",
-      "title": "DNS 查詢",
-      "time": "時間",
-      "domain": "網域",
-      "type": "類型",
-      "answer": "解析結果 / 上游",
-      "status": "狀態",
-      "empty": "等待新的 DNS 解析記錄",
-      "description": "本次觀測 · 最近 200 筆。僅統計此分頁開啟時收到的解析日誌，快取和多上游回應分別記錄；非完整 DNS 查詢總數，部分 Fake-IP 回應不會顯示。",
-      "statuses": {
-        "response": "回應",
-        "cache": "快取",
-        "error": "失敗"
+    "risk": {
+      "title": "風險檢測",
+      "summary": "有紀錄 {{hit}} · 未命中 {{clear}} · 未取得 {{unknown}}",
+      "legend": "⚠ 有紀錄 · ✓ 已檢測且未命中 · — 目前檢測服務未回傳此項",
+      "groups": {
+        "anonymity": "匿名性",
+        "abuse": "濫用",
+        "blacklist": "黑名單",
+        "attack": "攻擊"
+      },
+      "checks": {
+        "proxy": "代理",
+        "vpn": "VPN",
+        "tor": "Tor",
+        "anonymous": "匿名出口",
+        "crawler": "爬蟲",
+        "residentialProxy": "住宅代理",
+        "relay": "中繼",
+        "commentSpam": "留言垃圾",
+        "forumSpam": "論壇垃圾",
+        "harvester": "郵件採集",
+        "abuser": "濫用",
+        "threatIntel": "威脅情報",
+        "fraud": "高詐騙分",
+        "dnsbl": "DNSBL",
+        "honeypot": "HTTP 蜜罐",
+        "botnet": "C&C",
+        "malware": "惡意軟體",
+        "publicList": "黑名單",
+        "compromised": "失陷裝置",
+        "reports": "近期檢舉",
+        "multiReports": "多人檢舉",
+        "knownAttacker": "已知攻擊者",
+        "localThreat": "本地威脅",
+        "loginAttack": "登入攻擊",
+        "registrationAttack": "註冊攻擊"
+      },
+      "metrics": {
+        "proxyRisk": "代理威脅分",
+        "sharedDevices": "共用裝置",
+        "networkAbuse": "所在網路濫用比例",
+        "publicLists": "公開名單",
+        "reports": "檢舉紀錄",
+        "reportsDays": "近 {{days}} 天檢舉",
+        "webrtc": "WebRTC 洩漏",
+        "dns": "DNS 洩漏"
+      },
+      "units": {
+        "devices": "{{count}} 台",
+        "entries": "{{count}} 筆",
+        "lists": "{{count}} 份"
+      },
+      "webrtc": {
+        "checking": "檢測中",
+        "safe": "未洩漏",
+        "leak": "已洩漏",
+        "blocked": "已阻斷",
+        "unsupported": "不支援",
+        "unknown": "未知"
+      },
+      "dns": {
+        "checking": "檢測中",
+        "safe": "未洩漏",
+        "mismatch": "可能洩漏",
+        "failed": "檢測失敗",
+        "servers": "{{count}} 個 DNS 伺服器",
+        "unknown": "未知"
       }
     }
   }

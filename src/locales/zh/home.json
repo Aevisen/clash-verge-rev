@@ -3,7 +3,8 @@
     "tooltips": {
       "lightweightMode": "轻量模式",
       "manual": "使用手册",
-      "settings": "首页设置"
+      "settings": "首页设置",
+      "dragCard": "拖动调整位置"
     },
     "cards": {
       "trafficStats": "流量统计",
@@ -80,7 +81,10 @@
         "location": "位置",
         "timezone": "时区",
         "autoRefresh": "自动刷新",
-        "unknown": "未知"
+        "unknown": "未知",
+        "basic": "基本信息",
+        "refreshInterval": "刷新间隔",
+        "everyMinutes": "每 {{count}} 分钟"
       },
       "errors": {
         "load": "获取 IP 信息失败",
@@ -156,14 +160,11 @@
   "network": {
     "quality": "IP 属性与质量",
     "purity": "网络纯净度",
-    "lan": "内网 IP",
-    "connections": "实时连接",
-    "activity": "网络活动",
     "loading": "正在检测网络",
     "failed": "暂时无法获取检测结果，请稍后刷新。",
     "fallback": "带 Key 查询失败，已使用公开接口。",
     "detection": "风险标记检测",
-    "riskScore": "IPPure 风险系数",
+    "riskScore": "{{provider}} 风险系数",
     "lowerBetter": "数值越低越好 · 来源方评分，非网速测试",
     "flagged": "存在检测标记",
     "unflagged": "未见检测标记",
@@ -192,47 +193,84 @@
       "business": "企业网络",
       "unknown": "属性未知"
     },
-    "localIpv4": "本机局域网 IPv4 地址",
-    "lanFailed": "无法读取网卡信息。",
-    "noLan": "未发现内网 IPv4 地址",
-    "allowLan": "局域网代理",
-    "enabled": "已开启",
-    "disabled": "已关闭",
-    "viewAll": "查看全部",
-    "activeCount": "{{count}} 个活跃连接",
-    "live": "实时",
-    "stopped": "内核未运行",
-    "process": "来源",
-    "destination": "目标",
-    "outbound": "出口",
-    "noConnections": "暂无活跃连接",
-    "cardSettings": {
-      "ipquality": "IP 属性与质量卡片",
-      "lanip": "内网 IP 卡片",
-      "connections": "网络活动卡片",
-      "purity": "网络纯净度卡片"
-    },
     "settings": {
       "title": "IP 质量检测",
-      "description": "有 Key 时优先使用 ipapi.is；未配置或查询失败时，使用 IPPure 公开接口。",
-      "keyHint": "可选，留空或清除后仅使用公开接口。",
-      "privacy": "Key 以未加密形式保存在本机，不随订阅备份，仅通过 HTTPS 请求正文发送给 ipapi.is。检测服务会收到本次请求的出口 IP。"
+      "description": "按列表顺序使用已添加的检测服务，前一个失败时自动尝试下一个；都没有或都失败时，使用 IPPure 公开接口。",
+      "privacy": "Key 以未加密形式保存在本机，不随订阅备份，只发送给对应的检测服务（ipapi.is 放在 HTTPS 请求正文，cleanip.io 放在请求头）。检测服务会收到本次请求的出口 IP。",
+      "provider": "服务类型",
+      "url": "服务器地址",
+      "add": "添加服务",
+      "remove": "删除",
+      "empty": "未添加检测服务，将只使用 IPPure 公开接口。",
+      "httpsRequired": "检测服务必须使用有效的 HTTPS 地址；留空使用默认地址。"
     },
-    "copy": "复制",
-    "dns": {
-      "count": "{{count}} 条 DNS 查询",
-      "title": "DNS 查询",
-      "time": "时间",
-      "domain": "域名",
-      "type": "类型",
-      "answer": "解析结果 / 上游",
-      "status": "状态",
-      "empty": "等待新的 DNS 解析记录",
-      "description": "本次观测 · 最近 200 条。仅统计此标签打开时收到的解析日志，缓存和多上游响应分别记录；非完整 DNS 查询总数，部分 Fake-IP 应答不会显示。",
-      "statuses": {
-        "response": "响应",
-        "cache": "缓存",
-        "error": "失败"
+    "risk": {
+      "title": "风险检测",
+      "summary": "有记录 {{hit}} · 未命中 {{clear}} · 未取得 {{unknown}}",
+      "legend": "⚠ 有记录 · ✓ 已检测且未命中 · — 当前检测服务未返回此项",
+      "groups": {
+        "anonymity": "匿名性",
+        "abuse": "滥用",
+        "blacklist": "黑名单",
+        "attack": "攻击"
+      },
+      "checks": {
+        "proxy": "代理",
+        "vpn": "VPN",
+        "tor": "Tor",
+        "anonymous": "匿名出口",
+        "crawler": "爬虫",
+        "residentialProxy": "住宅代理",
+        "relay": "中继",
+        "commentSpam": "评论垃圾",
+        "forumSpam": "论坛垃圾",
+        "harvester": "邮件采集",
+        "abuser": "滥用",
+        "threatIntel": "威胁情报",
+        "fraud": "高欺诈分",
+        "dnsbl": "DNSBL",
+        "honeypot": "HTTP 蜜罐",
+        "botnet": "C&C",
+        "malware": "恶意软件",
+        "publicList": "黑名单",
+        "compromised": "失陷设备",
+        "reports": "近期举报",
+        "multiReports": "多人举报",
+        "knownAttacker": "已知攻击者",
+        "localThreat": "本地威胁",
+        "loginAttack": "登录攻击",
+        "registrationAttack": "注册攻击"
+      },
+      "metrics": {
+        "proxyRisk": "代理威胁分",
+        "sharedDevices": "共用设备",
+        "networkAbuse": "所在网络滥用比例",
+        "publicLists": "公开名单",
+        "reports": "举报记录",
+        "reportsDays": "近 {{days}} 天举报",
+        "webrtc": "WebRTC 泄漏",
+        "dns": "DNS 泄漏"
+      },
+      "units": {
+        "devices": "{{count}} 台",
+        "entries": "{{count}} 条",
+        "lists": "{{count}} 份"
+      },
+      "webrtc": {
+        "checking": "检测中",
+        "safe": "未泄漏",
+        "leak": "已泄漏",
+        "blocked": "已阻断",
+        "unsupported": "不支持",
+        "unknown": "未知"
+      },
+      "dns": {
+        "checking": "检测中",
+        "safe": "未泄漏",
+        "mismatch": "可能泄漏",
+        "failed": "检测失败",
+        "servers": "{{count}} 个 DNS 服务器",
+        "unknown": "未知"
       }
     }
   }

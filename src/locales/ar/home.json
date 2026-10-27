@@ -3,7 +3,8 @@
     "tooltips": {
       "lightweightMode": "وضع الأداء الخفيف",
       "manual": "دليل",
-      "settings": "Home Settings"
+      "settings": "Home Settings",
+      "dragCard": "اسحب لإعادة الترتيب"
     },
     "cards": {
       "trafficStats": "Traffic Stats",
@@ -80,7 +81,10 @@
         "location": "Location",
         "timezone": "Timezone",
         "autoRefresh": "Auto refresh",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "basic": "أساسيات",
+        "refreshInterval": "فترة التحديث",
+        "everyMinutes": "كل {{count}} دقيقة"
       },
       "errors": {
         "load": "فشل الحصول على معلومات الـ IP",
@@ -156,14 +160,11 @@
   "network": {
     "quality": "IP attributes & quality",
     "purity": "Network purity",
-    "lan": "LAN IP",
-    "connections": "Live connections",
-    "activity": "Network Activity",
     "loading": "Checking network",
     "failed": "Detection unavailable. Try refreshing later.",
     "fallback": "Keyed lookup failed; using the public provider.",
     "detection": "Detection results",
-    "riskScore": "IPPure risk score",
+    "riskScore": "{{provider}} risk score",
     "lowerBetter": "Lower is better · Provider score, not a connection speed test",
     "flagged": "Detection flags present",
     "unflagged": "No detection flags",
@@ -192,47 +193,84 @@
       "business": "Business",
       "unknown": "Unknown type"
     },
-    "localIpv4": "Private IPv4 addresses",
-    "lanFailed": "Unable to read network interfaces.",
-    "noLan": "No private IPv4 address found",
-    "allowLan": "LAN proxy access",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "viewAll": "View all",
-    "activeCount": "{{count}} active connections",
-    "live": "Live",
-    "stopped": "Core stopped",
-    "process": "Process",
-    "destination": "Destination",
-    "outbound": "Outbound",
-    "noConnections": "No active connections",
-    "cardSettings": {
-      "ipquality": "IP attributes & quality card",
-      "lanip": "LAN IP card",
-      "connections": "Network activity card",
-      "purity": "Network purity card"
-    },
     "settings": {
       "title": "IP quality detection",
-      "description": "With a key: use ipapi.is first. Without a key, or if that request fails: use IPPure public detection.",
-      "keyHint": "Optional. Clear to use public detection only.",
-      "privacy": "The key is stored unencrypted on this device, outside profile backups. It is sent only to ipapi.is in an HTTPS request body. Detection providers see the request egress IP."
+      "description": "Added services are tried in list order; if one fails, the next is used. With none added, or if all fail, IPPure public detection is used.",
+      "privacy": "Keys are stored unencrypted on this device, outside profile backups, and sent only to their own service (in the HTTPS request body for ipapi.is, in a request header for cleanip.io). Detection services see the request egress IP.",
+      "provider": "Service",
+      "url": "Server address",
+      "add": "Add service",
+      "remove": "Remove",
+      "empty": "No detection service added. Only IPPure public detection will be used.",
+      "httpsRequired": "Use a valid HTTPS address for detection services, or leave it blank for the default."
     },
-    "copy": "Copy",
-    "dns": {
-      "count": "{{count}} DNS queries",
-      "title": "DNS Queries",
-      "time": "Time",
-      "domain": "Domain",
-      "type": "Type",
-      "answer": "Answer / Upstream",
-      "status": "Status",
-      "empty": "Waiting for new DNS observations",
-      "description": "This observation session · latest 200 entries. Records are collected while this tab is open; cache hits and upstream replies count separately. This is not a complete DNS request count; some Fake-IP replies produce no log.",
-      "statuses": {
-        "response": "Reply",
-        "cache": "Cache",
-        "error": "Failed"
+    "risk": {
+      "title": "Risk checks",
+      "summary": "Recorded {{hit}} · Clear {{clear}} · Not reported {{unknown}}",
+      "legend": "⚠ Recorded · ✓ Checked, nothing found · — Not reported by the current service",
+      "groups": {
+        "anonymity": "Anonymity",
+        "abuse": "Abuse",
+        "blacklist": "Blacklists",
+        "attack": "Attacks"
+      },
+      "checks": {
+        "proxy": "Proxy",
+        "vpn": "VPN",
+        "tor": "Tor",
+        "anonymous": "Anonymous exit",
+        "crawler": "Crawler",
+        "residentialProxy": "Residential proxy",
+        "relay": "Relay",
+        "commentSpam": "Comment spam",
+        "forumSpam": "Forum spam",
+        "harvester": "Email harvesting",
+        "abuser": "Abuse",
+        "threatIntel": "Threat intel",
+        "fraud": "High fraud score",
+        "dnsbl": "DNSBL",
+        "honeypot": "HTTP honeypot",
+        "botnet": "C&C",
+        "malware": "Malware",
+        "publicList": "Blacklist",
+        "compromised": "Compromised device",
+        "reports": "Recent reports",
+        "multiReports": "Multiple reporters",
+        "knownAttacker": "Known attacker",
+        "localThreat": "Local threat",
+        "loginAttack": "Login attacks",
+        "registrationAttack": "Sign-up attacks"
+      },
+      "metrics": {
+        "proxyRisk": "Proxy threat score",
+        "sharedDevices": "Shared devices",
+        "networkAbuse": "Network abuse rate",
+        "publicLists": "Public lists",
+        "reports": "Abuse reports",
+        "reportsDays": "Reports, last {{days}} days",
+        "webrtc": "WebRTC leak",
+        "dns": "DNS leak"
+      },
+      "units": {
+        "devices": "{{count}} devices",
+        "entries": "{{count}}",
+        "lists": "{{count}}"
+      },
+      "webrtc": {
+        "checking": "Checking",
+        "safe": "No leak",
+        "leak": "Leaking",
+        "blocked": "Blocked",
+        "unsupported": "Unsupported",
+        "unknown": "Unknown"
+      },
+      "dns": {
+        "checking": "Checking",
+        "safe": "No leak",
+        "mismatch": "Possible leak",
+        "failed": "Failed",
+        "servers": "{{count}} DNS servers",
+        "unknown": "Unknown"
       }
     }
   }

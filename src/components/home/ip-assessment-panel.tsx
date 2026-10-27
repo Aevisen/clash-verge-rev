@@ -1,7 +1,6 @@
 import {
   CheckCircleOutlineRounded,
   LanguageOutlined,
-  RefreshOutlined,
   ShieldOutlined,
   VisibilityOffOutlined,
   VisibilityOutlined,
@@ -16,17 +15,41 @@ import {
   Stack,
   Tooltip,
   Typography,
+  alpha,
 } from '@mui/material'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useIpAssessment } from '@/hooks/use-ip-assessment'
 
-import { EnhancedCard } from './enhanced-card'
+export const IpPanelTitle = ({
+  icon,
+  color,
+  title,
+}: {
+  icon: ReactNode
+  color: 'primary' | 'success' | 'info'
+  title: string
+}) => (
+  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+    <Box
+      sx={(theme) => ({
+        display: 'flex',
+        p: 0.5,
+        borderRadius: 1,
+        color: `${color}.main`,
+        bgcolor: alpha(theme.palette[color].main, 0.12),
+      })}
+    >
+      {icon}
+    </Box>
+    <Typography variant="subtitle2">{title}</Typography>
+  </Stack>
+)
 
-export const IpAssessmentCard = ({ purity = false }: { purity?: boolean }) => {
+export const IpAssessmentPanel = ({ purity = false }: { purity?: boolean }) => {
   const { t } = useTranslation()
-  const { data, error, isLoading, isFetching, refetch } = useIpAssessment()
+  const { data, error, isLoading } = useIpAssessment()
   const [showIp, setShowIp] = useState(false)
   const flags = data ? Object.values(data.flags) : []
   const flagged = flags.some((value) => value === true)
@@ -35,24 +58,18 @@ export const IpAssessmentCard = ({ purity = false }: { purity?: boolean }) => {
   const title = t(purity ? 'home.network.purity' : 'home.network.quality')
 
   return (
-    <EnhancedCard
-      title={title}
-      icon={purity ? <ShieldOutlined /> : <LanguageOutlined />}
-      iconColor={purity ? 'success' : 'primary'}
-      minHeight={230}
-      action={
-        <Tooltip title={t('shared.actions.refresh')}>
-          <IconButton
-            aria-label={t('shared.actions.refresh')}
-            size="small"
-            disabled={isFetching}
-            onClick={() => void refetch()}
-          >
-            <RefreshOutlined />
-          </IconButton>
-        </Tooltip>
-      }
-    >
+    <Stack spacing={1.5} sx={{ height: '100%', minWidth: 0 }}>
+      <IpPanelTitle
+        icon={
+          purity ? (
+            <ShieldOutlined fontSize="small" />
+          ) : (
+            <LanguageOutlined fontSize="small" />
+          )
+        }
+        color={purity ? 'success' : 'primary'}
+        title={title}
+      />
       {isLoading && !data ? (
         <Stack spacing={1} aria-label={t('home.network.loading')}>
           <Skeleton height={56} width="75%" />
@@ -72,11 +89,9 @@ export const IpAssessmentCard = ({ purity = false }: { purity?: boolean }) => {
             <>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  {t(
-                    data.riskScore === null
-                      ? 'home.network.detection'
-                      : 'home.network.riskScore',
-                  )}
+                  {data.riskScore === null
+                    ? t('home.network.detection')
+                    : t('home.network.riskScore', { provider: data.provider })}
                 </Typography>
                 {data.riskScore !== null ? (
                   <>
@@ -101,7 +116,9 @@ export const IpAssessmentCard = ({ purity = false }: { purity?: boolean }) => {
                     <LinearProgress
                       variant="determinate"
                       value={data.riskScore}
-                      aria-label={t('home.network.riskScore')}
+                      aria-label={t('home.network.riskScore', {
+                        provider: data.provider,
+                      })}
                       sx={{ height: 6, borderRadius: 3, mb: 1 }}
                     />
                     <Typography variant="caption" color="text.secondary">
@@ -271,6 +288,6 @@ export const IpAssessmentCard = ({ purity = false }: { purity?: boolean }) => {
           </Typography>
         </Stack>
       )}
-    </EnhancedCard>
+    </Stack>
   )
 }

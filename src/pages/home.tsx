@@ -1,5 +1,7 @@
+import { DragDropProvider, KeyboardSensor, PointerSensor } from '@dnd-kit/react'
 import {
   DnsOutlined,
+  DragIndicatorRounded,
   HelpOutlineRounded,
   HistoryEduOutlined,
   RouterOutlined,
@@ -23,21 +25,26 @@ import {
   Tooltip,
 } from '@mui/material'
 import { useLockFn } from 'ahooks'
-import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import {
+  type ReactNode,
+  Suspense,
+  lazy,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BasePage } from '@/components/base'
+import { BasePage, SortableItem } from '@/components/base'
 import { ClashModeCard } from '@/components/home/clash-mode-card'
 import { CurrentProxyCard } from '@/components/home/current-proxy-card'
 import { EnhancedCard } from '@/components/home/enhanced-card'
 import { EnhancedTrafficStats } from '@/components/home/enhanced-traffic-stats'
 import { HomeProfileCard } from '@/components/home/home-profile-card'
-import { IpAssessmentCard } from '@/components/home/ip-assessment-card'
-import { LanIpCard } from '@/components/home/lan-ip-card'
-import { LiveConnectionsCard } from '@/components/home/live-connections-card'
 import { ProxyTunCard } from '@/components/home/proxy-tun-card'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useVerge } from '@/hooks/use-verge'
+import { useNavMenuOrder } from '@/pages/_layout/hooks'
 import { entry_lightweight_mode } from '@/services/cmds'
 import { mutate } from '@/services/mutate'
 import { showNotice } from '@/services/notice-service'
@@ -87,10 +94,6 @@ interface HomeCardsSettings {
   systeminfo: boolean
   test: boolean
   ip: boolean
-  ipquality: boolean
-  lanip: boolean
-  connections: boolean
-  purity: boolean
   [key: string]: boolean
 }
 
@@ -105,11 +108,23 @@ const DEFAULT_HOME_CARDS: HomeCardsSettings = {
   systeminfo: true,
   test: true,
   ip: true,
-  ipquality: true,
-  lanip: true,
-  connections: true,
-  purity: true,
 }
+
+const HOME_CARD_KEYS = [
+  'profile',
+  'proxy',
+  'network',
+  'mode',
+  'traffic',
+  'ip',
+  'test',
+  'clashinfo',
+  'systeminfo',
+] as const
+
+type HomeCardKey = (typeof HOME_CARD_KEYS)[number]
+
+const CARD_SENSORS = [PointerSensor, KeyboardSensor]
 
 const serializeCardFlags = (cards: HomeCardsSettings) =>
   Object.keys(cards)
@@ -157,20 +172,6 @@ const HomeSettingsDialog = ({
       <DialogTitle>{t('home.page.settings.title')}</DialogTitle>
       <DialogContent>
         <FormGroup>
-          {(['ipquality', 'lanip', 'connections', 'purity'] as const).map(
-            (key) => (
-              <FormControlLabel
-                key={key}
-                control={
-                  <Checkbox
-                    checked={cards[key]}
-                    onChange={() => handleToggle(key)}
-                  />
-                }
-                label={t(`home.network.cardSettings.${key}`)}
-              />
-            ),
-          )}
           <FormControlLabel
             control={
               <Checkbox
@@ -268,7 +269,7 @@ const HomeSettingsDialog = ({
 
 const HomePage = () => {
   const { t } = useTranslation()
-  const { verge } = useVerge()
+  const { verge, mutateVerge, patchVerge } = useVerge()
   const { current, mutateProfiles } = useProfiles()
 
   // 设置弹窗的状态
@@ -295,80 +296,114 @@ const HomePage = () => {
     setSettingsOpen(true)
   }, [])
 
-  const renderCard = useCallback(
-    (
-      cardKey: string,
-      component: React.ReactNode,
-      size: GridProps['size'] = 6,
-    ) => {
-      if (!homeCards[cardKey]) return null
-
-      return (
-        <Grid size={size} key={cardKey}>
-          {component}
-        </Grid>
-      )
-    },
+  // Only visible cards take part in sorting; hidden ones keep their place at the end of the stored order.
+  const visibleCardItems = useMemo(
+    () =>
+      HOME_CARD_KEYS.filter((key) => homeCards[key]).map((path) => ({ path })),
     [homeCards],
   )
-
-  const criticalCards = useMemo(
-    () => [
-      renderCard('ipquality', <IpAssessmentCard />),
-      renderCard('lanip', <LanIpCard />),
-      renderCard('purity', <IpAssessmentCard purity />, { xs: 6, md: 4 }),
-      renderCard('connections', <LiveConnectionsCard />, { xs: 6, md: 8 }),
-      renderCard(
-        'profile',
-        <HomeProfileCard current={current} onProfileUpdated={mutateProfiles} />,
-      ),
-      renderCard('proxy', <CurrentProxyCard />),
-      renderCard('network', <NetworkSettingsCard />),
-      renderCard('mode', <ClashModeEnhancedCard />),
-    ],
-    [current, mutateProfiles, renderCard],
-  )
-
-  const nonCriticalCards = useMemo(
-    () => [
-      renderCard(
-        'traffic',
-        <EnhancedCard
-          title={t('home.page.cards.trafficStats')}
-          icon={<SpeedOutlined />}
-          iconColor="secondary"
-        >
-          <EnhancedTrafficStats />
-        </EnhancedCard>,
-        12,
-      ),
-      renderCard(
-        'test',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyTestCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'ip',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyIpInfoCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'clashinfo',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazyClashInfoCard />
-        </Suspense>,
-      ),
-      renderCard(
-        'systeminfo',
-        <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
-          <LazySystemInfoCard />
-        </Suspense>,
+  // The order lives inside the free-form home_cards config next to the visibility flags.
+  const storedCardOrder = (verge?.home_cards as { order?: string[] } | null)
+    ?.order
+  const withHiddenCards = useCallback(
+    (order: string[]) => [
+      ...order,
+      ...(storedCardOrder ?? HOME_CARD_KEYS).filter(
+        (key) => !order.includes(key),
       ),
     ],
-    [t, renderCard],
+    [storedCardOrder],
   )
+  const optimisticCardOrder = useCallback(
+    (order: string[]) =>
+      mutateVerge(
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                home_cards: { ...homeCards, order: withHiddenCards(order) },
+              }
+            : prev,
+        false,
+      ),
+    [homeCards, mutateVerge, withHiddenCards],
+  )
+  const persistCardOrder = useCallback(
+    (order: string[]) =>
+      patchVerge({
+        home_cards: { ...homeCards, order: withHiddenCards(order) },
+      }),
+    [homeCards, patchVerge, withHiddenCards],
+  )
+  const { menuOrder: cardOrder, handleMenuDragEnd: handleCardDragEnd } =
+    useNavMenuOrder({
+      enabled: true,
+      items: visibleCardItems,
+      storedOrder: storedCardOrder,
+      onOptimisticUpdate: optimisticCardOrder,
+      onPersist: persistCardOrder,
+    })
+
+  const cards = useMemo<
+    Record<HomeCardKey, { node: ReactNode; size?: GridProps['size'] }>
+  >(
+    () => ({
+      profile: {
+        node: (
+          <HomeProfileCard
+            current={current}
+            onProfileUpdated={mutateProfiles}
+          />
+        ),
+      },
+      proxy: { node: <CurrentProxyCard /> },
+      network: { node: <NetworkSettingsCard /> },
+      mode: { node: <ClashModeEnhancedCard /> },
+      traffic: {
+        node: (
+          <EnhancedCard
+            title={t('home.page.cards.trafficStats')}
+            icon={<SpeedOutlined />}
+            iconColor="secondary"
+          >
+            <EnhancedTrafficStats />
+          </EnhancedCard>
+        ),
+        size: 12,
+      },
+      test: {
+        node: (
+          <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
+            <LazyTestCard />
+          </Suspense>
+        ),
+      },
+      ip: {
+        node: (
+          <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
+            <LazyIpInfoCard />
+          </Suspense>
+        ),
+        size: 12,
+      },
+      clashinfo: {
+        node: (
+          <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
+            <LazyClashInfoCard />
+          </Suspense>
+        ),
+      },
+      systeminfo: {
+        node: (
+          <Suspense fallback={<Skeleton variant="rectangular" height={200} />}>
+            <LazySystemInfoCard />
+          </Suspense>
+        ),
+      },
+    }),
+    [current, mutateProfiles, t],
+  )
+
   return (
     <BasePage
       title={t('home.page.title')}
@@ -402,11 +437,51 @@ const HomePage = () => {
         </Box>
       }
     >
-      <Grid container spacing={1.5} columns={{ xs: 6, sm: 6, md: 12 }}>
-        {criticalCards}
-
-        {nonCriticalCards}
-      </Grid>
+      <DragDropProvider sensors={CARD_SENSORS} onDragEnd={handleCardDragEnd}>
+        <Grid container spacing={1.5} columns={{ xs: 6, sm: 6, md: 12 }}>
+          {cardOrder.map((key, index) => (
+            <SortableItem key={key} id={key} index={index}>
+              {({ ref, handleRef, style }) => (
+                <Grid
+                  ref={ref}
+                  size={cards[key as HomeCardKey].size ?? 6}
+                  style={style}
+                  sx={{
+                    '&:hover > .home-card-handle, & > .home-card-handle:focus-visible':
+                      { opacity: 1 },
+                  }}
+                >
+                  {cards[key as HomeCardKey].node}
+                  <Box
+                    ref={handleRef}
+                    className="home-card-handle"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('home.page.tooltips.dragCard')}
+                    title={t('home.page.tooltips.dragCard')}
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      px: 1.5,
+                      lineHeight: 0,
+                      color: 'text.secondary',
+                      cursor: 'grab',
+                      opacity: 0,
+                      transition: 'opacity 0.15s',
+                    }}
+                  >
+                    <DragIndicatorRounded
+                      sx={{ fontSize: 18, transform: 'rotate(90deg)' }}
+                    />
+                  </Box>
+                </Grid>
+              )}
+            </SortableItem>
+          ))}
+        </Grid>
+      </DragDropProvider>
 
       {/* 首页设置弹窗 */}
       {settingsOpen && (

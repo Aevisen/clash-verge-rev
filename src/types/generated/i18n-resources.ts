@@ -98,10 +98,13 @@ export interface TranslationResources {
           labels: {
             asn: string
             autoRefresh: string
+            basic: string
+            everyMinutes: string
             ip: string
             isp: string
             location: string
             org: string
+            refreshInterval: string
             timezone: string
             unknown: string
           }
@@ -166,40 +169,10 @@ export interface TranslationResources {
         }
       }
       network: {
-        activeCount: string
-        activity: string
-        allowLan: string
         broadcast: string
-        cardSettings: {
-          connections: string
-          ipquality: string
-          lanip: string
-          purity: string
-        }
         checkedAt: string
-        connections: string
-        copy: string
-        destination: string
         detection: string
-        disabled: string
-        dns: {
-          answer: string
-          count: string
-          description: string
-          domain: string
-          empty: string
-          status: string
-          statuses: {
-            cache: string
-            error: string
-            response: string
-          }
-          time: string
-          title: string
-          type: string
-        }
         egress: string
-        enabled: string
         failed: string
         fallback: string
         flagged: string
@@ -211,31 +184,96 @@ export interface TranslationResources {
           vpn: string
         }
         hideIp: string
-        lan: string
-        lanFailed: string
-        live: string
         loading: string
-        localIpv4: string
         lowerBetter: string
         native: string
         no: string
-        noConnections: string
-        noLan: string
-        outbound: string
-        process: string
         purity: string
         quality: string
         referenceOnly: string
+        risk: {
+          checks: {
+            abuser: string
+            anonymous: string
+            botnet: string
+            commentSpam: string
+            compromised: string
+            crawler: string
+            dnsbl: string
+            forumSpam: string
+            fraud: string
+            harvester: string
+            honeypot: string
+            knownAttacker: string
+            localThreat: string
+            loginAttack: string
+            malware: string
+            multiReports: string
+            proxy: string
+            publicList: string
+            registrationAttack: string
+            relay: string
+            reports: string
+            residentialProxy: string
+            threatIntel: string
+            tor: string
+            vpn: string
+          }
+          dns: {
+            checking: string
+            failed: string
+            mismatch: string
+            safe: string
+            servers: string
+            unknown: string
+          }
+          groups: {
+            abuse: string
+            anonymity: string
+            attack: string
+            blacklist: string
+          }
+          legend: string
+          metrics: {
+            dns: string
+            networkAbuse: string
+            proxyRisk: string
+            publicLists: string
+            reports: string
+            reportsDays: string
+            sharedDevices: string
+            webrtc: string
+          }
+          summary: string
+          title: string
+          units: {
+            devices: string
+            entries: string
+            lists: string
+          }
+          webrtc: {
+            blocked: string
+            checking: string
+            leak: string
+            safe: string
+            unknown: string
+            unsupported: string
+          }
+        }
         riskScore: string
         score: string
         settings: {
+          add: string
           description: string
-          keyHint: string
+          empty: string
+          httpsRequired: string
           privacy: string
+          provider: string
+          remove: string
           title: string
+          url: string
         }
         showIp: string
-        stopped: string
         types: {
           business: string
           hosting: string
@@ -245,7 +283,6 @@ export interface TranslationResources {
         }
         unflagged: string
         unknown: string
-        viewAll: string
         yes: string
       }
       page: {
@@ -270,6 +307,7 @@ export interface TranslationResources {
         }
         title: string
         tooltips: {
+          dragCard: string
           lightweightMode: string
           manual: string
           settings: string
