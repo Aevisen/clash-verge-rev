@@ -158,6 +158,7 @@
     "purity": "Network purity",
     "lan": "LAN IP",
     "connections": "Live connections",
+    "activity": "網路活動",
     "loading": "Checking network",
     "failed": "Detection unavailable. Try refreshing later.",
     "fallback": "Keyed lookup failed; using the public provider.",
@@ -198,7 +199,7 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "viewAll": "View all",
-    "active": "active connections",
+    "activeCount": "{{count}} active connections",
     "live": "Live",
     "stopped": "Core stopped",
     "process": "Process",
@@ -208,7 +209,7 @@
     "cardSettings": {
       "ipquality": "IP attributes & quality card",
       "lanip": "LAN IP card",
-      "connections": "Live connections card",
+      "connections": "網路活動卡片",
       "purity": "Network purity card"
     },
     "settings": {
@@ -217,6 +218,22 @@
       "keyHint": "Optional. Clear to use public detection only.",
       "privacy": "The key is stored unencrypted on this device, outside profile backups. It is sent only to ipapi.is in an HTTPS request body. Detection providers see the request egress IP."
     },
-    "copy": "Copy"
+    "copy": "Copy",
+    "dns": {
+      "count": "{{count}} 筆 DNS 查詢",
+      "title": "DNS 查詢",
+      "time": "時間",
+      "domain": "網域",
+      "type": "類型",
+      "answer": "解析結果 / 上游",
+      "status": "狀態",
+      "empty": "等待新的 DNS 解析記錄",
+      "description": "本次觀測 · 最近 200 筆。僅統計此分頁開啟時收到的解析日誌，快取和多上游回應分別記錄；非完整 DNS 查詢總數，部分 Fake-IP 回應不會顯示。",
+      "statuses": {
+        "response": "回應",
+        "cache": "快取",
+        "error": "失敗"
+      }
+    }
   }
 }

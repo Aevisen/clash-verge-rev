@@ -166,7 +166,8 @@ export interface TranslationResources {
         }
       }
       network: {
-        active: string
+        activeCount: string
+        activity: string
         allowLan: string
         broadcast: string
         cardSettings: {
@@ -181,6 +182,22 @@ export interface TranslationResources {
         destination: string
         detection: string
         disabled: string
+        dns: {
+          answer: string
+          count: string
+          description: string
+          domain: string
+          empty: string
+          status: string
+          statuses: {
+            cache: string
+            error: string
+            response: string
+          }
+          time: string
+          title: string
+          type: string
+        }
         egress: string
         enabled: string
         failed: string
