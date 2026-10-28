@@ -4,17 +4,21 @@ import {
   RemoveRounded,
   WarningAmberRounded,
 } from '@mui/icons-material'
-import { Box, Chip, Stack, Typography } from '@mui/material'
+import { Box, Chip, Stack, Tooltip, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useDnsLeak } from '@/hooks/use-dns-leak'
 import { useIpAssessment } from '@/hooks/use-ip-assessment'
 import { useWebrtcLeak } from '@/hooks/use-webrtc-leak'
-import { RISK_CHECK_GROUPS, type IpAssessment } from '@/services/ip-assessment'
+import {
+  RISK_CHECK_GROUPS,
+  groupAssessmentValues,
+  type IpAssessment,
+} from '@/services/ip-assessment'
 import { getDnsLeakStatus, getWebrtcLeakState } from '@/utils/ip-leak-state'
 
-import { IpPanelTitle } from './ip-assessment-panel'
+import { AssessmentTooltip, IpPanelTitle } from './ip-assessment-panel'
 
 const EMPTY = '—'
 
@@ -48,7 +52,7 @@ const Metric = ({
         fontVariantNumeric: 'tabular-nums',
         color: tone,
       }}
-      noWrap
+      component="div"
     >
       {value}
     </Typography>
@@ -124,81 +128,111 @@ export const IpRiskPanel = ({ egressIp }: { egressIp?: string }) => {
   const { t } = useTranslation()
   const { data } = useIpAssessment()
   const webrtc = useWebrtcState(
-    [egressIp, data?.ip].filter((ip): ip is string => !!ip),
+    [egressIp, ...(data ?? []).map((result) => result.ip)].filter(
+      (ip): ip is string => !!ip,
+    ),
   )
   const dns = useDnsState()
-  const metrics: Partial<IpAssessment['metrics']> = data?.metrics ?? {}
-  const checks: Partial<IpAssessment['checks']> = data?.checks ?? {}
-  const values = Object.values(checks)
+  const results = data ?? []
   const fmt = (value: number | null | undefined, key?: string) =>
     value == null ? EMPTY : key ? t(key, { count: value }) : value
 
+  const metricValue = (
+    select: (result: IpAssessment) => string | number | null,
+    format: (value: string | number) => ReactNode = (value) => value,
+  ) => (
+    <Stack spacing={0.5}>
+      {groupAssessmentValues(results, select).map(({ value, sources }) => (
+        <AssessmentTooltip key={value ?? 'unknown'} sources={sources}>
+          <Box
+            component="span"
+            tabIndex={0}
+            sx={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}
+          >
+            {value === null ? EMPTY : format(value)}
+          </Box>
+        </AssessmentTooltip>
+      ))}
+    </Stack>
+  )
+
   return (
     <Stack spacing={1.5} sx={{ mt: 3 }}>
-      <Stack
-        direction="row"
-        sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
-      >
-        <IpPanelTitle
-          icon={<GppMaybeOutlined fontSize="small" />}
-          color="primary"
-          title={t('home.network.risk.title')}
-        />
-        <Typography variant="caption" color="text.secondary">
-          {t('home.network.risk.summary', {
-            hit: values.filter((value) => value === true).length,
-            clear: values.filter((value) => value === false).length,
-            unknown: values.filter((value) => value == null).length,
-          })}
-        </Typography>
-      </Stack>
+      <IpPanelTitle
+        icon={<GppMaybeOutlined fontSize="small" />}
+        color="primary"
+        title={t('home.network.risk.title')}
+      />
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))',
+          gridTemplateColumns: {
+            xs: 'repeat(2, minmax(0, 1fr))',
+            sm: 'repeat(4, minmax(0, 1fr))',
+            lg: 'repeat(8, minmax(0, 1fr))',
+          },
           gap: 1,
         }}
       >
         <Metric
           label={t('home.network.risk.metrics.proxyRisk')}
-          value={
-            metrics.proxyRisk == null ? EMPTY : `${metrics.proxyRisk} / 100`
-          }
+          value={metricValue(({ metrics }) =>
+            metrics.proxyRisk == null ? null : `${metrics.proxyRisk} / 100`,
+          )}
         />
         <Metric
           label={t('home.network.risk.metrics.sharedDevices')}
-          value={fmt(metrics.sharedDevices, 'home.network.risk.units.devices')}
+          value={metricValue(({ metrics }) =>
+            metrics.sharedDevices == null
+              ? null
+              : fmt(metrics.sharedDevices, 'home.network.risk.units.devices'),
+          )}
         />
         <Metric
           label={t('home.network.risk.metrics.networkAbuse')}
-          value={
-            metrics.networkAbuse == null
-              ? EMPTY
-              : `${(metrics.networkAbuse * 100).toFixed(2)}%`
-          }
+          value={metricValue(
+            ({ metrics }) => metrics.networkAbuse,
+            (value) =>
+              Number(value).toLocaleString(undefined, {
+                style: 'percent',
+                maximumFractionDigits: 8,
+              }),
+          )}
         />
         <Metric
           label="DNSBL"
-          value={fmt(metrics.dnsbl, 'home.network.risk.units.entries')}
+          value={metricValue(({ metrics }) =>
+            metrics.dnsbl == null
+              ? null
+              : fmt(metrics.dnsbl, 'home.network.risk.units.entries'),
+          )}
         />
         <Metric
           label={t('home.network.risk.metrics.publicLists')}
-          value={fmt(metrics.publicLists, 'home.network.risk.units.lists')}
+          value={metricValue(({ metrics }) =>
+            metrics.publicLists == null
+              ? null
+              : fmt(metrics.publicLists, 'home.network.risk.units.lists'),
+          )}
         />
         <Metric
-          label={
-            metrics.reportDays
-              ? t('home.network.risk.metrics.reportsDays', {
-                  days: metrics.reportDays,
-                })
-              : t('home.network.risk.metrics.reports')
-          }
-          value={fmt(metrics.reports, 'home.network.risk.units.entries')}
+          label={t('home.network.risk.metrics.reports')}
+          value={metricValue(({ metrics }) =>
+            metrics.reports == null
+              ? null
+              : `${fmt(metrics.reports, 'home.network.risk.units.entries')}${metrics.reportDays ? `\n${t('home.network.risk.metrics.reportsDays', { days: metrics.reportDays })}` : ''}`,
+          )}
         />
         <Metric
           label={t('home.network.risk.metrics.webrtc')}
-          value={t(`home.network.risk.webrtc.${webrtc.state}`)}
+          value={
+            <Tooltip title="WebRTC · Google / Cloudflare STUN" describeChild>
+              <Box component="span" tabIndex={0}>
+                {t(`home.network.risk.webrtc.${webrtc.state}`)}
+              </Box>
+            </Tooltip>
+          }
           tone={
             webrtc.state === 'leak'
               ? 'warning.main'
@@ -210,7 +244,13 @@ export const IpRiskPanel = ({ egressIp }: { egressIp?: string }) => {
         />
         <Metric
           label={t('home.network.risk.metrics.dns')}
-          value={t(`home.network.risk.dns.${dns.state}`)}
+          value={
+            <Tooltip title="bash.ws" describeChild>
+              <Box component="span" tabIndex={0}>
+                {t(`home.network.risk.dns.${dns.state}`)}
+              </Box>
+            </Tooltip>
+          }
           tone={
             dns.state === 'mismatch'
               ? 'warning.main'
@@ -225,44 +265,117 @@ export const IpRiskPanel = ({ egressIp }: { egressIp?: string }) => {
           }
         />
       </Box>
+    </Stack>
+  )
+}
 
+export const IpRiskChecksPanel = () => {
+  const { t } = useTranslation()
+  const { data } = useIpAssessment()
+  const results = data ?? []
+  const values = Object.values(RISK_CHECK_GROUPS)
+    .flat()
+    .map((id) => {
+      const reported = results.map((result) => result.checks[id])
+      return reported.includes(true)
+        ? true
+        : reported.includes(false)
+          ? false
+          : null
+    })
+
+  return (
+    <Stack
+      spacing={1}
+      sx={{
+        minWidth: 0,
+        '& .MuiTypography-caption': { fontSize: 11 },
+        '& .MuiChip-root': {
+          fontSize: 11,
+          height: 20,
+          '& .MuiChip-icon': { fontSize: 14 },
+        },
+      }}
+    >
+      <IpPanelTitle
+        icon={<GppMaybeOutlined fontSize="small" />}
+        color="primary"
+        title={t('home.network.detection')}
+      />
+      <Tooltip title={t('home.network.risk.legend')} describeChild>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          tabIndex={0}
+          sx={{
+            minHeight: 36,
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'help',
+          }}
+        >
+          {t('home.network.risk.summary', {
+            hit: values.filter((value) => value === true).length,
+            clear: values.filter((value) => value === false).length,
+            unknown: values.filter((value) => value === null).length,
+          })}
+        </Typography>
+      </Tooltip>
       {(
         Object.keys(RISK_CHECK_GROUPS) as (keyof typeof RISK_CHECK_GROUPS)[]
       ).map((group) => {
         const ids = RISK_CHECK_GROUPS[group]
-        const known = ids.filter((id) => checks[id] != null)
-        const hits = ids.filter((id) => checks[id] === true)
+        const known = ids.filter((id) =>
+          results.some((result) => result.checks[id] !== null),
+        )
+        const hits = ids.filter((id) =>
+          results.some((result) => result.checks[id] === true),
+        )
         return (
           <Stack
             key={group}
             direction="row"
-            spacing={1.5}
+            spacing={1}
             sx={{ alignItems: 'flex-start' }}
           >
-            <Box sx={{ width: 64, flexShrink: 0, pt: 0.25 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            <Box sx={{ width: 52, flexShrink: 0, pt: 0.25 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, fontSize: 12 }}
+              >
                 {t(`home.network.risk.groups.${group}`)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {known.length ? `${hits.length} / ${known.length}` : EMPTY}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {ids.map((id) => (
-                <CheckChip
-                  key={id}
-                  label={t(`home.network.risk.checks.${id}`)}
-                  value={checks[id] ?? null}
-                />
-              ))}
+            <Box
+              sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}
+            >
+              {ids.flatMap((id) => {
+                const groups = groupAssessmentValues(
+                  results,
+                  (result) => result.checks[id],
+                )
+                return groups.map(({ value, sources }) => (
+                  <AssessmentTooltip key={`${id}-${value}`} sources={sources}>
+                    <Box
+                      component="span"
+                      tabIndex={0}
+                      sx={{ display: 'inline-flex' }}
+                    >
+                      <CheckChip
+                        label={`${t(`home.network.risk.checks.${id}`)}${groups.length > 1 ? ` · ${t(value ? 'home.network.yes' : 'home.network.no')}` : ''}`}
+                        value={value}
+                      />
+                    </Box>
+                  </AssessmentTooltip>
+                ))
+              })}
             </Box>
           </Stack>
         )
       })}
-
-      <Typography variant="caption" color="text.secondary">
-        {t('home.network.risk.legend')}
-      </Typography>
     </Stack>
   )
 }

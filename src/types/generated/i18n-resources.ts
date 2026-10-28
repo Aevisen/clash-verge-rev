@@ -260,13 +260,22 @@ export interface TranslationResources {
             unsupported: string
           }
         }
+        riskBands: string
+        riskLevels: {
+          default: string
+          error: string
+          success: string
+          warning: string
+        }
         riskScore: string
         score: string
         settings: {
           add: string
           description: string
           empty: string
+          enabled: string
           httpsRequired: string
+          keyRequired: string
           privacy: string
           provider: string
           remove: string
@@ -275,8 +284,12 @@ export interface TranslationResources {
         }
         showIp: string
         types: {
+          banking: string
           business: string
+          education: string
+          government: string
           hosting: string
+          isp: string
           mobile: string
           residential: string
           unknown: string

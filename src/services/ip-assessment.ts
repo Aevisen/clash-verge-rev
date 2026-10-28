@@ -3,12 +3,13 @@ import isIP from 'validator/es/lib/isIP'
 
 import { getIpInfo } from './api'
 
-export type IpAssessmentProviderType = 'ipapi' | 'cleanip'
+export type IpAssessmentProviderType = 'ipapi' | 'cleanip' | 'ipinfo'
 
 export interface IpAssessmentProvider {
   type: IpAssessmentProviderType
   url: string
   key: string
+  enabled?: boolean
 }
 
 export const IP_ASSESSMENT_PROVIDER_URLS: Record<
@@ -17,6 +18,7 @@ export const IP_ASSESSMENT_PROVIDER_URLS: Record<
 > = {
   ipapi: 'https://api.ipapi.is/',
   cleanip: 'https://api.cleanip.io',
+  ipinfo: 'https://api.ipinfo.io',
 }
 
 export const isHttpsAssessmentUrl = (value: string) => {
@@ -80,14 +82,14 @@ interface IpRiskMetrics {
 
 export interface IpAssessment {
   ip: string
-  provider: 'IPPure' | 'ipapi.is' | 'cleanip.io'
+  provider: 'IPPure' | 'ipapi.is' | 'cleanip.io' | 'IPinfo'
   fallback: boolean
   checkedAt: number
   organization: string
   asn: string
   location: string
   countryCode: string
-  networkType: 'residential' | 'hosting' | 'mobile' | 'business' | 'unknown'
+  networkType: (typeof NETWORK_TYPES)[number] | 'unknown'
   broadcast: boolean | null
   riskScore: number | null
   flags: Record<
@@ -99,7 +101,16 @@ export interface IpAssessment {
   metrics: IpRiskMetrics
 }
 
-const NETWORK_TYPES = ['residential', 'hosting', 'mobile', 'business'] as const
+const NETWORK_TYPES = [
+  'residential',
+  'hosting',
+  'mobile',
+  'business',
+  'isp',
+  'education',
+  'government',
+  'banking',
+] as const
 
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object'
@@ -120,7 +131,7 @@ const score100 = (value: unknown) => {
   return n !== null && n <= 100 ? n : null
 }
 const networkType = (value: string): IpAssessment['networkType'] => {
-  const type = value.toLowerCase()
+  const type = value.trim().toLowerCase().replace(/ ip$/, '')
   return (NETWORK_TYPES as readonly string[]).includes(type)
     ? (type as IpAssessment['networkType'])
     : 'unknown'
@@ -203,18 +214,45 @@ const requestIppure = () =>
     }
   })
 
-const requestIpapi = (provider: IpAssessmentProvider) =>
+// shortcut: cooldowns reset on app restart; persist them if retries must survive relaunch.
+const ipapiRetryAfter = new Map<string, number>()
+
+const requestIpapi = (provider: IpAssessmentProvider, ip: string) =>
   withTimeout(async (signal): Promise<IpAssessment> => {
-    const data = await readJson(
-      await fetch(provider.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: provider.key }),
-        maxRedirections: 0,
-        connectTimeout: 8_000,
-        signal,
+    const cooldownKey = JSON.stringify([provider.url, provider.key])
+    if ((ipapiRetryAfter.get(cooldownKey) ?? 0) > Date.now())
+      throw new Error('IP assessment unavailable')
+    ipapiRetryAfter.delete(cooldownKey)
+    const response = await fetch(provider.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        q: ip,
+        ...(provider.key && { key: provider.key }),
       }),
-    )
+      maxRedirections: 0,
+      connectTimeout: 8_000,
+      signal,
+    })
+    if (response.status === 429 || response.status === 403) {
+      const now = Date.now()
+      const header = response.headers.get('Retry-After') ?? ''
+      const seconds = Number(header)
+      const retryAt = Number.isFinite(seconds)
+        ? now + seconds * 1_000
+        : Date.parse(header)
+      const midnight = new Date(now)
+      midnight.setUTCHours(24, 0, 0, 0)
+      ipapiRetryAfter.set(
+        cooldownKey,
+        Number.isFinite(retryAt) && retryAt > now
+          ? retryAt
+          : response.status === 403
+            ? now + 24 * 60 * 60_000
+            : midnight.getTime(),
+      )
+    }
+    const data = await readJson(response)
     if (!isIP(text(data.ip))) throw new Error('IP assessment unavailable')
     const company = record(data.company)
     const asn = record(data.asn)
@@ -231,9 +269,15 @@ const requestIpapi = (provider: IpAssessmentProvider) =>
       provider: 'ipapi.is',
       fallback: false,
       checkedAt: Date.now(),
-      organization: text(company.name) || text(asn.org),
-      asn: typeof asn.asn === 'number' ? `AS${asn.asn}` : '',
-      location: [text(location.country), text(location.city)]
+      organization: text(company.name) || text(asn.org) || text(data.company),
+      asn:
+        typeof asn.asn === 'number'
+          ? `AS${asn.asn}`
+          : text(data.asn).split(' ')[0],
+      location: [
+        text(location.country) || text(data.country),
+        text(location.city) || text(data.city),
+      ]
         .filter(Boolean)
         .join(' · '),
       countryCode: text(location.country_code),
@@ -267,11 +311,8 @@ const requestIpapi = (provider: IpAssessmentProvider) =>
     }
   })
 
-const requestCleanip = (provider: IpAssessmentProvider) =>
+const requestCleanip = (provider: IpAssessmentProvider, ip: string) =>
   withTimeout(async (signal): Promise<IpAssessment> => {
-    // The keyed API looks up a given address, so resolve the egress IP first.
-    const { ip } = await getIpInfo()
-    if (!isIP(ip)) throw new Error('IP assessment unavailable')
     const data = await readJson(
       await fetch(
         `${provider.url.replace(/\/+$/, '')}/api/v2/${encodeURIComponent(ip)}`,
@@ -396,28 +437,122 @@ const requestCleanip = (provider: IpAssessmentProvider) =>
     }
   })
 
+const requestIpinfo = (provider: IpAssessmentProvider, ip: string) =>
+  withTimeout(async (signal): Promise<IpAssessment> => {
+    const base = provider.url.replace(/\/+$/, '')
+    const explicitEndpoint = /\/(lookup|lite)$/.test(base)
+    const request = (url: string) =>
+      fetch(`${url}/${encodeURIComponent(ip)}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${provider.key}` },
+        maxRedirections: 0,
+        connectTimeout: 8_000,
+        signal,
+      })
+    let response = await request(explicitEndpoint ? base : `${base}/lookup`)
+    if (response.status === 403 && !base.endsWith('/lite'))
+      response = await request(`${base.replace(/\/lookup$/, '')}/lite`)
+    const data = await readJson(response)
+    if (!isIP(text(data.ip))) throw new Error('IP assessment unavailable')
+    const geo = record(data.geo)
+    const asn = record(data.as)
+    const anonymous = record(data.anonymous)
+    return {
+      ip: text(data.ip),
+      provider: 'IPinfo',
+      fallback: false,
+      checkedAt: Date.now(),
+      organization: text(asn.name) || text(data.as_name),
+      asn: text(asn.asn) || text(data.asn),
+      location: [text(geo.country) || text(data.country), text(geo.city)]
+        .filter(Boolean)
+        .join(' · '),
+      countryCode: text(geo.country_code) || text(data.country_code),
+      networkType:
+        data.is_mobile === true
+          ? 'mobile'
+          : data.is_hosting === true
+            ? 'hosting'
+            : networkType(text(asn.type)),
+      broadcast: null,
+      riskScore: null,
+      flags: {
+        proxy: flag(anonymous.is_proxy),
+        vpn: flag(anonymous.is_vpn),
+        tor: flag(anonymous.is_tor),
+        datacenter: flag(data.is_hosting),
+        abuser: null,
+      },
+      checks: {
+        ...emptyChecks(),
+        proxy: flag(anonymous.is_proxy),
+        vpn: flag(anonymous.is_vpn),
+        tor: flag(anonymous.is_tor),
+        anonymous: flag(data.is_anonymous),
+        residentialProxy: flag(anonymous.is_res_proxy),
+        relay: flag(anonymous.is_relay),
+      },
+      metrics: emptyMetrics(),
+    }
+  })
+
+export const groupAssessmentValues = <T>(
+  results: IpAssessment[],
+  select: (result: IpAssessment) => T | null | undefined,
+) => {
+  const groups: { value: T | null; sources: IpAssessment[] }[] = []
+  for (const result of results) {
+    const value = select(result)
+    if (value == null) continue
+    const group = groups.find((entry) => Object.is(entry.value, value))
+    if (group) group.sources.push(result)
+    else groups.push({ value, sources: [result] })
+  }
+  return groups.length ? groups : [{ value: null, sources: results }]
+}
+
 export async function getIpAssessment(
   providers: IpAssessmentProvider[],
-): Promise<IpAssessment> {
-  const usable = providers.filter((provider) => provider.key.trim())
-  for (const provider of usable) {
-    try {
-      const url =
-        provider.url.trim() || IP_ASSESSMENT_PROVIDER_URLS[provider.type]
-      if (!isHttpsAssessmentUrl(url)) continue
-      return await (provider.type === 'cleanip'
-        ? requestCleanip
-        : requestIpapi)({
-        ...provider,
-        url,
-        key: provider.key.trim(),
-      })
-    } catch {
-      // Never log provider errors: they may contain credentials.
+): Promise<IpAssessment[]> {
+  const usable = providers.filter(
+    (provider) =>
+      provider.enabled !== false &&
+      (provider.type === 'ipapi' || provider.key.trim()),
+  )
+  const secure = usable.filter((provider) => isHttpsAssessmentUrl(provider.url))
+  try {
+    if (secure.length) {
+      // Compare providers against one address even when their requests take different routes.
+      const { ip } = await getIpInfo()
+      if (!isIP(ip)) throw new Error('IP assessment unavailable')
+      const settled = await Promise.allSettled(
+        secure.map((provider) =>
+          (provider.type === 'cleanip'
+            ? requestCleanip
+            : provider.type === 'ipinfo'
+              ? requestIpinfo
+              : requestIpapi)(
+            {
+              ...provider,
+              url:
+                provider.url.trim() ||
+                IP_ASSESSMENT_PROVIDER_URLS[provider.type],
+              key: provider.key.trim(),
+            },
+            ip,
+          ),
+        ),
+      )
+      const results = settled.flatMap((result) =>
+        result.status === 'fulfilled' ? [result.value] : [],
+      )
+      if (results.length) return results
     }
+  } catch {
+    // Never log provider errors: they may contain credentials.
   }
   try {
-    return { ...(await requestIppure()), fallback: usable.length > 0 }
+    return [{ ...(await requestIppure()), fallback: usable.length > 0 }]
   } catch {
     throw new Error('IP assessment unavailable')
   }

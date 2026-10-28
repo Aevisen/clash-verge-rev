@@ -1,15 +1,8 @@
-import {
-  CheckCircleOutlineRounded,
-  LanguageOutlined,
-  ShieldOutlined,
-  VisibilityOffOutlined,
-  VisibilityOutlined,
-} from '@mui/icons-material'
+import { CheckCircleOutlineRounded, ShieldOutlined } from '@mui/icons-material'
 import {
   Alert,
   Box,
   Chip,
-  IconButton,
   LinearProgress,
   Skeleton,
   Stack,
@@ -17,10 +10,20 @@ import {
   Typography,
   alpha,
 } from '@mui/material'
-import { type ReactNode, useState } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useIpAssessment } from '@/hooks/use-ip-assessment'
+import {
+  groupAssessmentValues,
+  type IpAssessment,
+} from '@/services/ip-assessment'
+import {
+  getIpRiskColor,
+  getNetworkTypeColor,
+} from '@/utils/ip-assessment-display'
+
+const FLAG_NAMES = ['proxy', 'vpn', 'tor', 'datacenter', 'abuser'] as const
 
 export const IpPanelTitle = ({
   icon,
@@ -47,28 +50,81 @@ export const IpPanelTitle = ({
   </Stack>
 )
 
-export const IpAssessmentPanel = ({ purity = false }: { purity?: boolean }) => {
+export const AssessmentTooltip = ({
+  sources,
+  children,
+  description,
+}: {
+  sources: IpAssessment[]
+  children: ReactElement
+  description?: string
+}) => {
+  const { t } = useTranslation()
+  return (
+    <Tooltip
+      describeChild
+      title={[
+        description,
+        ...sources.map(
+          (source) =>
+            `${source.provider} · ${t('home.network.checkedAt', {
+              time: new Date(source.checkedAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            })}${[source.asn, source.organization, source.location].some(Boolean) ? `\n${[source.asn, source.organization, source.location].filter(Boolean).join(' · ')}` : ''}`,
+        ),
+      ]
+        .filter(Boolean)
+        .join('\n')}
+      slotProps={{ tooltip: { sx: { whiteSpace: 'pre-line' } } }}
+    >
+      {children}
+    </Tooltip>
+  )
+}
+
+export const IpAssessmentPanel = () => {
   const { t } = useTranslation()
   const { data, error, isLoading } = useIpAssessment()
-  const [showIp, setShowIp] = useState(false)
-  const flags = data ? Object.values(data.flags) : []
-  const flagged = flags.some((value) => value === true)
+  const results = data ?? []
+  const flags = FLAG_NAMES.flatMap((name) =>
+    groupAssessmentValues(results, (result) => result.flags[name]).map(
+      ({ value }) => value,
+    ),
+  )
+  const flagged =
+    flags.some((value) => value === true) ||
+    results.some((result) =>
+      Object.values(result.checks).some((value) => value === true),
+    )
   const complete = flags.length > 0 && flags.every((value) => value !== null)
   const status = flagged ? 'flagged' : complete ? 'unflagged' : 'unknown'
-  const title = t(purity ? 'home.network.purity' : 'home.network.quality')
+  const scores = groupAssessmentValues(results, (result) => result.riskScore)
+  const broadcasts = groupAssessmentValues(
+    results,
+    (result) => result.broadcast,
+  )
 
   return (
-    <Stack spacing={1.5} sx={{ height: '100%', minWidth: 0 }}>
+    <Stack
+      spacing={1.5}
+      sx={{
+        height: '100%',
+        minWidth: 0,
+        '& .MuiTypography-body2': { fontSize: 12 },
+        '& .MuiTypography-caption': { fontSize: 11 },
+        '& .MuiChip-root': {
+          fontSize: 11,
+          height: 20,
+          '& .MuiChip-icon': { fontSize: 14 },
+        },
+      }}
+    >
       <IpPanelTitle
-        icon={
-          purity ? (
-            <ShieldOutlined fontSize="small" />
-          ) : (
-            <LanguageOutlined fontSize="small" />
-          )
-        }
-        color={purity ? 'success' : 'primary'}
-        title={title}
+        icon={<ShieldOutlined fontSize="small" />}
+        color="success"
+        title={t('home.network.purity')}
       />
       {isLoading && !data ? (
         <Stack spacing={1} aria-label={t('home.network.loading')}>
@@ -79,55 +135,138 @@ export const IpAssessmentPanel = ({ purity = false }: { purity?: boolean }) => {
       ) : error || !data ? (
         <Alert severity="warning">{t('home.network.failed')}</Alert>
       ) : (
-        <Stack spacing={1.5} sx={{ height: '100%' }}>
-          {data.fallback && (
+        <Stack spacing={1} sx={{ height: '100%' }}>
+          {results.some((result) => result.fallback) && (
             <Alert severity="info" sx={{ py: 0 }}>
               {t('home.network.fallback')}
             </Alert>
           )}
-          {purity ? (
-            <>
-              <Box>
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              minHeight: 36,
+              gap: 0.5,
+            }}
+          >
+            {groupAssessmentValues(results, (result) =>
+              result.networkType === 'unknown' ? null : result.networkType,
+            ).map(({ value, sources }) => (
+              <AssessmentTooltip key={value ?? 'unknown'} sources={sources}>
+                <Chip
+                  size="small"
+                  color={getNetworkTypeColor(value ?? 'unknown')}
+                  variant={value === 'residential' ? 'filled' : 'outlined'}
+                  tabIndex={0}
+                  label={t(`home.network.types.${value ?? 'unknown'}`)}
+                />
+              </AssessmentTooltip>
+            ))}
+          </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {scores.map(({ value, sources }) => (
+              <AssessmentTooltip key={value ?? 'unknown'} sources={sources}>
+                <Chip
+                  size="small"
+                  tabIndex={0}
+                  icon={
+                    value === null && status === 'unflagged' ? (
+                      <CheckCircleOutlineRounded />
+                    ) : undefined
+                  }
+                  color={
+                    value === null
+                      ? flagged
+                        ? 'warning'
+                        : 'default'
+                      : getIpRiskColor(value)
+                  }
+                  label={
+                    value === null
+                      ? t(`home.network.${status}`)
+                      : `${t('home.network.score', { score: value })} · ${t(`home.network.riskLevels.${getIpRiskColor(value)}`)}`
+                  }
+                />
+              </AssessmentTooltip>
+            ))}
+            {broadcasts
+              .filter(({ value }) => value !== null)
+              .map(({ value, sources }) => (
+                <AssessmentTooltip key={String(value)} sources={sources}>
+                  <Chip
+                    size="small"
+                    variant={value ? 'outlined' : 'filled'}
+                    color={value ? 'warning' : 'success'}
+                    tabIndex={0}
+                    label={t(
+                      value ? 'home.network.broadcast' : 'home.network.native',
+                    )}
+                  />
+                </AssessmentTooltip>
+              ))}
+          </Box>
+          {scores.map(({ value, sources }) => (
+            <AssessmentTooltip
+              key={value ?? 'unknown'}
+              sources={sources}
+              description={`${t('home.network.lowerBetter')}
+${t('home.network.riskBands')}
+${t('home.network.referenceOnly')}`}
+            >
+              <Box tabIndex={0} sx={{ cursor: 'help' }}>
                 <Typography variant="body2" color="text.secondary">
-                  {data.riskScore === null
+                  {value === null
                     ? t('home.network.detection')
-                    : t('home.network.riskScore', { provider: data.provider })}
+                    : t('home.network.riskScore', {
+                        provider: sources
+                          .map((source) => source.provider)
+                          .join(' / '),
+                      })}
                 </Typography>
-                {data.riskScore !== null ? (
+                {value !== null ? (
                   <>
                     <Typography
                       component="div"
                       sx={{
-                        fontSize: 38,
+                        fontSize: 22,
+                        color: `${getIpRiskColor(value)}.main`,
                         fontWeight: 700,
-                        lineHeight: 1.4,
+                        lineHeight: 1.3,
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {data.riskScore}
+                      {value}
                       <Typography
                         component="span"
                         color="text.secondary"
-                        sx={{ ml: 0.5 }}
+                        sx={{ ml: 0.5, fontSize: 12 }}
                       >
                         / 100
                       </Typography>
                     </Typography>
                     <LinearProgress
                       variant="determinate"
-                      value={data.riskScore}
+                      color={
+                        getIpRiskColor(value) === 'default'
+                          ? 'primary'
+                          : (getIpRiskColor(value) as
+                              | 'success'
+                              | 'warning'
+                              | 'error')
+                      }
+                      value={value}
                       aria-label={t('home.network.riskScore', {
-                        provider: data.provider,
+                        provider: sources
+                          .map((source) => source.provider)
+                          .join(' / '),
                       })}
-                      sx={{ height: 6, borderRadius: 3, mb: 1 }}
+                      sx={{ height: 4, borderRadius: 3, mt: 0.5 }}
                     />
-                    <Typography variant="caption" color="text.secondary">
-                      {t('home.network.lowerBetter')}
-                    </Typography>
                   </>
                 ) : (
                   <Typography
-                    sx={{ fontSize: 24, fontWeight: 650, my: 1 }}
+                    sx={{ fontSize: 16, fontWeight: 650, my: 0.5 }}
                     color={
                       flagged
                         ? 'warning.main'
@@ -140,152 +279,47 @@ export const IpAssessmentPanel = ({ purity = false }: { purity?: boolean }) => {
                   </Typography>
                 )}
               </Box>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                {(['proxy', 'vpn', 'tor', 'datacenter', 'abuser'] as const).map(
-                  (name) => {
-                    const value = data.flags[name]
-                    return (
-                      <Chip
-                        key={name}
-                        size="small"
-                        variant="outlined"
-                        color={
-                          value === true
-                            ? 'warning'
-                            : value === false
-                              ? 'success'
-                              : 'default'
-                        }
-                        label={`${t(`home.network.flags.${name}`)} · ${t(value === null ? 'home.network.unknown' : value ? 'home.network.yes' : 'home.network.no')}`}
-                      />
-                    )
-                  },
-                )}
-              </Box>
-              <Typography variant="caption" color="text.secondary">
-                {t('home.network.referenceOnly')}
-              </Typography>
-            </>
-          ) : (
-            <>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                sx={{ alignItems: 'center' }}
-              >
-                <Box
-                  sx={{
-                    bgcolor: 'action.hover',
-                    borderRadius: 2,
-                    p: 1.5,
-                    fontWeight: 700,
-                    color: 'primary.main',
-                  }}
-                >
-                  {data.countryCode || 'IP'}
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {t('home.network.egress')}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: { xs: 24, lg: 30 },
-                      fontWeight: 700,
-                      wordBreak: 'break-all',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {showIp ? data.ip : '•••.•••.•••.•••'}
-                  </Typography>
-                </Box>
-                <Tooltip
-                  title={t(
-                    showIp ? 'home.network.hideIp' : 'home.network.showIp',
-                  )}
-                >
-                  <IconButton
-                    size="small"
-                    aria-label={t(
-                      showIp ? 'home.network.hideIp' : 'home.network.showIp',
-                    )}
-                    onClick={() => setShowIp(!showIp)}
-                  >
-                    {showIp ? (
-                      <VisibilityOffOutlined />
-                    ) : (
-                      <VisibilityOutlined />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ flexWrap: 'wrap', gap: 0.5 }}
-              >
-                <Chip
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  label={t(`home.network.types.${data.networkType}`)}
-                />
-                <Chip
-                  size="small"
-                  icon={
-                    data.riskScore === null && status === 'unflagged' ? (
-                      <CheckCircleOutlineRounded />
-                    ) : undefined
-                  }
-                  color={flagged ? 'warning' : 'default'}
-                  label={
-                    data.riskScore === null
-                      ? t(`home.network.${status}`)
-                      : t('home.network.score', { score: data.riskScore })
-                  }
-                />
-                {data.broadcast !== null && (
+            </AssessmentTooltip>
+          ))}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {FLAG_NAMES.flatMap((name) =>
+              groupAssessmentValues(
+                results,
+                (result) => result.flags[name],
+              ).map(({ value, sources }) => (
+                <AssessmentTooltip key={`${name}-${value}`} sources={sources}>
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={t(
-                      data.broadcast
-                        ? 'home.network.broadcast'
-                        : 'home.network.native',
-                    )}
+                    tabIndex={0}
+                    color={
+                      value === true
+                        ? 'warning'
+                        : value === false
+                          ? 'success'
+                          : 'default'
+                    }
+                    label={`${t(`home.network.flags.${name}`)} · ${t(value === null ? 'home.network.unknown' : value ? 'home.network.yes' : 'home.network.no')}`}
                   />
-                )}
-              </Stack>
-              <Box>
-                <Typography
-                  variant="body2"
-                  sx={{ fontWeight: 600, wordBreak: 'break-word' }}
-                >
-                  {data.organization || t('home.network.unknown')}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 0.5 }}
-                >
-                  {[data.asn, data.location].filter(Boolean).join(' · ')}
-                </Typography>
-              </Box>
-            </>
-          )}
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ mt: 'auto !important', pt: 1 }}
+                </AssessmentTooltip>
+              )),
+            )}
+          </Box>
+          <AssessmentTooltip
+            sources={results}
+            description={t('home.network.referenceOnly')}
           >
-            {data.provider} ·{' '}
-            {t('home.network.checkedAt', {
-              time: new Date(data.checkedAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            })}
-          </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              tabIndex={0}
+              sx={{ mt: 'auto !important', pt: 1 }}
+            >
+              {[...new Set(results.map((result) => result.provider))].join(
+                ' · ',
+              )}
+            </Typography>
+          </AssessmentTooltip>
         </Stack>
       )}
     </Stack>

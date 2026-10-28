@@ -40,7 +40,7 @@ import getSystem from '@/utils/get-system'
 
 import { EnhancedCard } from './enhanced-card'
 import { IpAssessmentPanel, IpPanelTitle } from './ip-assessment-panel'
-import { IpRiskPanel } from './ip-risk-panel'
+import { IpRiskChecksPanel, IpRiskPanel } from './ip-risk-panel'
 
 // Assessment providers rate-limit, so the shortest interval stays at one minute.
 const REFRESH_MINUTE_OPTIONS = [1, 5, 10, 30, 60]
@@ -397,7 +397,7 @@ export const IpInfoCard = () => {
           gridTemplateColumns: {
             xs: '1fr',
             md: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(3, minmax(0, 1fr))',
+            lg: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr)',
           },
           gap: 3,
           flex: 1,
@@ -414,7 +414,7 @@ export const IpInfoCard = () => {
         <IpAssessmentPanel />
         {/* Spans the second row in the two-column layout. */}
         <Box sx={{ gridColumn: { md: '1 / -1', lg: 'auto' } }}>
-          <IpAssessmentPanel purity />
+          <IpRiskChecksPanel />
         </Box>
       </Box>
 

@@ -10,6 +10,7 @@ import {
   IconButton,
   MenuItem,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material'
@@ -28,12 +29,14 @@ import { showNotice } from '@/services/notice-service'
 const PROVIDER_LABELS: Record<IpAssessmentProviderType, string> = {
   ipapi: 'ipapi.is',
   cleanip: 'cleanip.io',
+  ipinfo: 'IPinfo',
 }
 
 type Row = IpAssessmentProvider & { id: number }
 let rowSeq = 0
 const toRow = (provider: IpAssessmentProvider): Row => ({
   ...provider,
+  enabled: provider.enabled ?? true,
   id: ++rowSeq,
 })
 
@@ -48,11 +51,18 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
     )
 
   const save = () => {
-    const next = rows
-      .map(({ type, url, key }) => ({ type, url: url.trim(), key: key.trim() }))
-      .filter((row) => row.key)
-    if (next.some((row) => !isHttpsAssessmentUrl(row.url))) {
+    const next = rows.map(({ type, url, key, enabled }) => ({
+      type,
+      url: url.trim(),
+      key: key.trim(),
+      enabled: enabled !== false,
+    }))
+    if (next.some((row) => row.enabled && !isHttpsAssessmentUrl(row.url))) {
       showNotice.error(t('home.network.settings.httpsRequired'))
+      return
+    }
+    if (next.some((row) => row.enabled && row.type !== 'ipapi' && !row.key)) {
+      showNotice.error(t('home.network.settings.keyRequired'))
       return
     }
     setProviders(next)
@@ -70,7 +80,7 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
   }
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{t('home.network.settings.title')}</DialogTitle>
       <DialogContent>
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -84,11 +94,21 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
               spacing={1}
               sx={{ alignItems: { sm: 'flex-start' } }}
             >
+              <Switch
+                checked={row.enabled !== false}
+                onChange={(_, enabled) => updateRow(index, { enabled })}
+                slotProps={{
+                  input: {
+                    'aria-label': `${t('home.network.settings.enabled')} ${PROVIDER_LABELS[row.type]}`,
+                  },
+                }}
+              />
               <TextField
                 select
                 size="small"
                 label={t('home.network.settings.provider')}
                 value={row.type}
+                disabled={row.enabled === false}
                 onChange={(event) => {
                   const type = event.target.value as IpAssessmentProviderType
                   updateRow(index, {
@@ -101,7 +121,7 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
                 }}
                 sx={{ minWidth: 130 }}
               >
-                {(['ipapi', 'cleanip'] as const).map((type) => (
+                {(['ipapi', 'cleanip', 'ipinfo'] as const).map((type) => (
                   <MenuItem key={type} value={type}>
                     {PROVIDER_LABELS[type]}
                   </MenuItem>
@@ -111,27 +131,41 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
                 size="small"
                 label={t('home.network.settings.url')}
                 value={row.url}
-                error={!isHttpsAssessmentUrl(row.url)}
+                disabled={row.enabled === false}
+                error={row.enabled !== false && !isHttpsAssessmentUrl(row.url)}
                 helperText={
-                  !isHttpsAssessmentUrl(row.url)
+                  row.enabled !== false && !isHttpsAssessmentUrl(row.url)
                     ? t('home.network.settings.httpsRequired')
                     : undefined
                 }
                 onChange={(event) =>
                   updateRow(index, { url: event.target.value })
                 }
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, minWidth: 0 }}
               />
               <TextField
                 size="small"
                 type="password"
                 autoComplete="new-password"
-                label="API Key"
+                label={row.type === 'ipinfo' ? 'Token' : 'API Key'}
                 value={row.key}
+                disabled={row.enabled === false}
+                error={
+                  row.enabled !== false &&
+                  row.type !== 'ipapi' &&
+                  !row.key.trim()
+                }
+                helperText={
+                  row.enabled !== false &&
+                  row.type !== 'ipapi' &&
+                  !row.key.trim()
+                    ? t('home.network.settings.keyRequired')
+                    : undefined
+                }
                 onChange={(event) =>
                   updateRow(index, { key: event.target.value })
                 }
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, minWidth: 0 }}
               />
               <IconButton
                 aria-label={t('home.network.settings.remove')}
@@ -158,6 +192,7 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
                     type: 'ipapi',
                     url: IP_ASSESSMENT_PROVIDER_URLS.ipapi,
                     key: '',
+                    enabled: true,
                   }),
                 ])
               }
@@ -176,7 +211,10 @@ export const IpAssessmentSettings = ({ onClose }: { onClose: () => void }) => {
           variant="contained"
           onClick={save}
           disabled={rows.some(
-            (row) => !!row.key.trim() && !isHttpsAssessmentUrl(row.url),
+            (row) =>
+              row.enabled !== false &&
+              (!isHttpsAssessmentUrl(row.url) ||
+                (row.type !== 'ipapi' && !row.key.trim())),
           )}
         >
           {t('shared.actions.save')}

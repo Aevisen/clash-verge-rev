@@ -162,7 +162,7 @@
     "purity": "Network purity",
     "loading": "Checking network",
     "failed": "Detection unavailable. Try refreshing later.",
-    "fallback": "Keyed lookup failed; using the public provider.",
+    "fallback": "Configured detection services are unavailable; using the public API.",
     "detection": "Detection results",
     "riskScore": "{{provider}} risk score",
     "lowerBetter": "Lower is better · Provider score, not a connection speed test",
@@ -191,18 +191,24 @@
       "hosting": "Hosting",
       "mobile": "Mobile",
       "business": "Business",
-      "unknown": "Unknown type"
+      "unknown": "Unknown type",
+      "isp": "ISP network",
+      "education": "Education network",
+      "government": "Government network",
+      "banking": "Banking network"
     },
     "settings": {
       "title": "IP quality detection",
-      "description": "Added services are tried in list order; if one fails, the next is used. With none added, or if all fail, IPPure public detection is used.",
-      "privacy": "Keys are stored unencrypted on this device, outside profile backups, and sent only to their own service (in the HTTPS request body for ipapi.is, in a request header for cleanip.io). Detection services see the request egress IP.",
+      "description": "Query all enabled services and combine their metrics. Matching results are merged; conflicting results retain their sources. Turn off every service to use only IPPure. ipapi.is can query without a key; cleanip.io and IPinfo require credentials. IPinfo tries Lookup first, then Lite if access is denied; Lite provides basic country and ASN data only.",
+      "privacy": "Keys and tokens are stored unencrypted on this device, outside profile backups, and sent only to their own service over HTTPS (ipapi.is in the request body, cleanip.io in X-API-Key, IPinfo in Authorization). Detection services receive the queried IP and the request egress IP.",
       "provider": "Service",
       "url": "Server address",
       "add": "Add service",
       "remove": "Remove",
       "empty": "No detection service added. Only IPPure public detection will be used.",
-      "httpsRequired": "Use a valid HTTPS address for detection services, or leave it blank for the default."
+      "httpsRequired": "Use a valid HTTPS address for detection services, or leave it blank for the default.",
+      "enabled": "Enable",
+      "keyRequired": "Enter an API key / token for this service, or turn it off."
     },
     "risk": {
       "title": "Risk checks",
@@ -272,6 +278,13 @@
         "servers": "{{count}} DNS servers",
         "unknown": "Unknown"
       }
+    },
+    "riskBands": "Color guide: 0–29 low · 30–69 medium · 70–100 high risk",
+    "riskLevels": {
+      "success": "Low risk",
+      "warning": "Medium risk",
+      "error": "High risk",
+      "default": "Unknown"
     }
   }
 }

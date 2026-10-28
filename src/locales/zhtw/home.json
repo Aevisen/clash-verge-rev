@@ -162,7 +162,7 @@
     "purity": "Network purity",
     "loading": "Checking network",
     "failed": "Detection unavailable. Try refreshing later.",
-    "fallback": "Keyed lookup failed; using the public provider.",
+    "fallback": "設定的檢測服務均無法使用，已使用公開介面。",
     "detection": "Detection results",
     "riskScore": "{{provider}} risk score",
     "lowerBetter": "Lower is better · Provider score, not a connection speed test",
@@ -191,18 +191,24 @@
       "hosting": "Hosting",
       "mobile": "Mobile",
       "business": "Business",
-      "unknown": "Unknown type"
+      "unknown": "Unknown type",
+      "isp": "電信業者網路",
+      "education": "教育網路",
+      "government": "政府網路",
+      "banking": "金融網路"
     },
     "settings": {
       "title": "IP quality detection",
-      "description": "依列表順序使用已新增的檢測服務，前一個失敗時自動嘗試下一個；都沒有或都失敗時，使用 IPPure 公開介面。",
-      "privacy": "Key 以未加密形式儲存在本機，不隨訂閱備份，只傳送給對應的檢測服務（ipapi.is 放在 HTTPS 請求本文，cleanip.io 放在請求標頭）。檢測服務會收到本次請求的出口 IP。",
+      "description": "同時查詢已啟用的服務並整合指標：相同結果合併，不同結果保留來源。全部關閉時僅使用 IPPure。ipapi.is 可無 Key 查詢；cleanip.io 和 IPinfo 需要憑證。IPinfo 優先查詢完整介面，權限不足時回退 Lite；Lite 僅提供國家和 ASN 等基本資訊。",
+      "privacy": "Key / Token 以未加密形式儲存在本機，不隨訂閱備份，僅透過 HTTPS 傳送給對應服務（ipapi.is 放在請求本文，cleanip.io 放在 X-API-Key 標頭，IPinfo 放在 Authorization 標頭）。檢測服務會收到查詢的 IP 和本次請求的出口 IP。",
       "provider": "服務類型",
       "url": "伺服器位址",
       "add": "新增服務",
       "remove": "刪除",
       "empty": "未新增檢測服務，將只使用 IPPure 公開介面。",
-      "httpsRequired": "檢測服務必須使用有效的 HTTPS 位址；留空使用預設位址。"
+      "httpsRequired": "檢測服務必須使用有效的 HTTPS 位址；留空使用預設位址。",
+      "enabled": "啟用",
+      "keyRequired": "請填寫此服務的 API Key / Token，或關閉此服務。"
     },
     "risk": {
       "title": "風險檢測",
@@ -272,6 +278,13 @@
         "servers": "{{count}} 個 DNS 伺服器",
         "unknown": "未知"
       }
+    },
+    "riskBands": "顏色提示：0–29 低風險 · 30–69 中風險 · 70–100 高風險",
+    "riskLevels": {
+      "success": "低風險",
+      "warning": "中風險",
+      "error": "高風險",
+      "default": "未知"
     }
   }
 }
